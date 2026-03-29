@@ -1174,6 +1174,9 @@ function ReportView({ orders, expenses, reconciliations, config }) {
          if (isNaN(dt.getTime())) return false;
          d = new Date(dt.getTime() - (dt.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
        } catch (e) { return false; }
+    } else {
+       // Support 'Y-m-d H:i:s' from server (lexicographical fix)
+       d = d.split(' ')[0];
     }
     return d >= startDate && d <= endDate;
   });
