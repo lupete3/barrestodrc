@@ -1,0 +1,48 @@
+# Plan d'Implémentation : RestoBKV POS App
+
+L'objectif est de créer une application web de Point de Vente (POS) pour bars, restaurants et boîtes de nuit à Bukavu. L'application doit être extrêmement robuste, fonctionner hors-ligne (offline-first), et être adaptée aux écrans tactiles Android avec de grands boutons et une esthétique moderne haut de gamme.
+
+## Architecture & Technologies
+- **Frontend Core** : React avec Vite (très rapide, HMR instantané, temps de build minime).
+- **Styling** : Vanilla CSS pour un contrôle total, en créant un design premium (glassmorphism subtil, mode sombre élégant pour les environnements de boîte de nuit, et interactions fluides).
+- **Stockage Local (Offline)** : IndexedDB via localforage ou Zustand avec persist, pour stocker les menus, les commandes non synchronisées, et les sessions serveurs locale.
+- **PWA (Progressive Web App)** : Configuration de `vite-plugin-pwa` avec Service Worker pour permettre l'installation sur les tablettes Android et le fonctionnement sans connexion réseau (cache des ressources statiques).
+- **Backend / DB Online** : Pour la synchronisation avec le Cpanel/VPS (à ajouter ultérieurement ou via des endpoints d'API fictifs synchronisables).
+
+## Expérience Utilisateur (UI/UX)
+- **POS First (Serveurs)** : Interface sans distraction, navigation par "grosses catégories" (Boissons, Nourritures, Extras), grille de produits avec grandes zones interactives pour éviter les erreurs de saisie sous pression. Gestion du "Panier" (Order Cart) toujours visible sur le côté.
+- **Section Admin / Gérant (Backoffice)** : Réservé aux managers. Tableaux de bord intuitifs (rapports de vente), paramétrage des serveurs, des produits, et gestion des dépenses.
+- **Impression** : Clic rapide pour lancer l'impression des tickets/factures, formaté pour les imprimantes thermiques 80mm ou 58mm via CSS `@media print`.
+
+## User Review Required
+
+> [!IMPORTANT]
+> Pour garantir que l'application correspond parfaitement à vos attentes pour les réalités de Bukavu, je propose de structurer le dev en 4 étapes majeures qui sont listées ci-dessous en composants. 
+> Êtes-vous d'accord avec empilement React + Vite + Vanilla CSS et la base IndexedDB locale pour le mode hors-ligne ?
+
+## Proposed Changes
+
+### 1- Initialisation & Fondations
+- Création du projet Vite (`c:\Users\Placide\Desktop\BarResto`).
+- Mise en place d'un système de thèmes dans `index.css` (variables CSS pour couleurs premium, polices, tailles tactiles).
+
+### 2- POS UI (Interface Serveurs)
+- Composant `POSLayout` : Grille principale.
+- Composant `ProductGrid` & `CategoryTabs` : Grandes icônes et textes pour sélection rapide.
+- Composant `OrderCart` : Gestion de la commande en cours avec boutons "+ / -".
+- Composant `ReceiptPrinter` : Format de ticket visuel pour impression.
+
+### 3- Gestion des Données Locales (Offline)
+- Service `db.js` : Implémentation de fonctions IndexedDB pour stocker les produits (Menus), les serveurs enregistrés et la file d'attente de commandes à synchroniser.
+
+### 4- Interface Backoffice (Admin)
+- Section de pilotage (Dashboard local).
+- Interface CRUD local pour gérer les stocks et régulariser les factures des serveurs avant la fin du service.
+
+## Verification Plan
+
+### Manual Verification
+1. Démarrer le projet React avec `npm run dev`.
+2. Ouvrir le navigateur et simuler une tablette/téléphone pour tester le mode tactile et les gros boutons.
+3. Tester la création de commandes et le rafraîchissement (F5) pour s'assurer que les données persistent (Offline).
+4. Passer en mode "Offline" via le navigateur et vérifier la continuité des services (PWA).
