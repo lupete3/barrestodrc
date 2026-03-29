@@ -49,91 +49,71 @@ class SyncController extends Controller
         $itemFields = ['id', 'name', 'category_id', 'price', 'image'];
         $userFields = ['id', 'name', 'role', 'pin_code'];
 
-        if (isset($data['categories']) && is_array($data['categories'])) {
-            foreach ($data['categories'] as $catData) {
-                $filtered = array_intersect_key($catData, array_flip($categoryFields));
-                Category::updateOrCreate(['id' => $catData['id']], $filtered);
-            }
-        }
-
-        if (isset($data['items']) && is_array($data['items'])) {
-            foreach ($data['items'] as $itemData) {
-                // Map React 'category' to Laravel 'category_id'
-                if(isset($itemData['category'])) {
-                    $itemData['category_id'] = $itemData['category'];
+        try {
+            if (isset($data['categories']) && is_array($data['categories'])) {
+                foreach ($data['categories'] as $catData) {
+                    $filtered = array_intersect_key($catData, array_flip($categoryFields));
+                    Category::updateOrCreate(['id' => $catData['id']], $filtered);
                 }
-                $filtered = array_intersect_key($itemData, array_flip($itemFields));
-                Item::updateOrCreate(['id' => $itemData['id']], $filtered);
             }
-        }
 
-        if (isset($data['users']) && is_array($data['users'])) {
-            foreach ($data['users'] as $userData) {
-                // Map React 'pin' to Laravel 'pin_code'
-                if(isset($userData['pin'])) {
-                    $userData['pin_code'] = $userData['pin'];
+            if (isset($data['items']) && is_array($data['items'])) {
+                foreach ($data['items'] as $itemData) {
+                    if(isset($itemData['category'])) { $itemData['category_id'] = $itemData['category']; }
+                    $filtered = array_intersect_key($itemData, array_flip($itemFields));
+                    Item::updateOrCreate(['id' => $itemData['id']], $filtered);
                 }
-                $filtered = array_intersect_key($userData, array_flip($userFields));
-                StaffUser::updateOrCreate(['id' => $userData['id']], $filtered);
             }
-        }
 
-        if (isset($data['orders']) && is_array($data['orders'])) {
-            foreach ($data['orders'] as $orderData) {
-                $id = $orderData['id'];
-                
-                if(isset($orderData['server'])) {
-                    $orderData['server_name'] = $orderData['server'];
+            if (isset($data['users']) && is_array($data['users'])) {
+                foreach ($data['users'] as $userData) {
+                    if(isset($userData['pin'])) { $userData['pin_code'] = $userData['pin']; }
+                    $filtered = array_intersect_key($userData, array_flip($userFields));
+                    StaffUser::updateOrCreate(['id' => $userData['id']], $filtered);
                 }
-
-                if(isset($orderData['reconciliationId'])) {
-                    $orderData['reconciliation_id'] = $orderData['reconciliationId'];
-                }
-
-                if(isset($orderData['timestamp'])) {
-                    $orderData['timestamp'] = $this->normalizeTimestamp($orderData['timestamp']);
-                }
-                
-                // Filter to keep only allowed fields
-                $filtered = array_intersect_key($orderData, array_flip($orderFields));
-                Order::updateOrCreate(['id' => $id], $filtered);
             }
-        }
 
-        if (isset($data['expenses']) && is_array($data['expenses'])) {
-            foreach ($data['expenses'] as $expenseData) {
-                $id = $expenseData['id'];
-                if(isset($expenseData['timestamp'])) {
-                    $expenseData['timestamp'] = $this->normalizeTimestamp($expenseData['timestamp']);
+            if (isset($data['orders']) && is_array($data['orders'])) {
+                foreach ($data['orders'] as $orderData) {
+                    $id = $orderData['id'];
+                    if(isset($orderData['server'])) { $orderData['server_name'] = $orderData['server']; }
+                    if(isset($orderData['reconciliationId'])) { $orderData['reconciliation_id'] = $orderData['reconciliationId']; }
+                    if(isset($orderData['timestamp'])) { $orderData['timestamp'] = $this->normalizeTimestamp($orderData['timestamp']); }
+                    $filtered = array_intersect_key($orderData, array_flip($orderFields));
+                    Order::updateOrCreate(['id' => $id], $filtered);
                 }
-                $filtered = array_intersect_key($expenseData, array_flip($expenseFields));
-                Expense::updateOrCreate(['id' => $id], $filtered);
             }
-        }
 
-        if (isset($data['reconciliations']) && is_array($data['reconciliations'])) {
-            foreach ($data['reconciliations'] as $reconciliationData) {
-                $id = $reconciliationData['id'];
-                
-                // Map camelCase (React) to snake_case (Laravel)
-                if(isset($reconciliationData['serverName'])) { $reconciliationData['server_name'] = $reconciliationData['serverName']; }
-                if(isset($reconciliationData['expectedAmount'])) { $reconciliationData['expected_amount'] = $reconciliationData['expectedAmount']; }
-                if(isset($reconciliationData['actualAmount'])) { $reconciliationData['actual_amount'] = $reconciliationData['actualAmount']; }
-                if(isset($reconciliationData['managerName'])) { $reconciliationData['manager_name'] = $reconciliationData['managerName']; }
-                
-                if(isset($reconciliationData['timestamp'])) {
-                    $reconciliationData['timestamp'] = $this->normalizeTimestamp($reconciliationData['timestamp']);
+            if (isset($data['expenses']) && is_array($data['expenses'])) {
+                foreach ($data['expenses'] as $expenseData) {
+                    $id = $expenseData['id'];
+                    if(isset($expenseData['timestamp'])) { $expenseData['timestamp'] = $this->normalizeTimestamp($expenseData['timestamp']); }
+                    $filtered = array_intersect_key($expenseData, array_flip($expenseFields));
+                    Expense::updateOrCreate(['id' => $id], $filtered);
                 }
-
-                $filtered = array_intersect_key($reconciliationData, array_flip($reconFields));
-                Reconciliation::updateOrCreate(['id' => $id], $filtered);
             }
-        }
 
-        if (isset($data['settings']) && is_array($data['settings'])) {
-            foreach ($data['settings'] as $key => $value) {
-                PosSetting::updateOrCreate(['key' => $key], ['value' => is_array($value) ? json_encode($value) : $value]);
+            if (isset($data['reconciliations']) && is_array($data['reconciliations'])) {
+                foreach ($data['reconciliations'] as $reconciliationData) {
+                    $id = $reconciliationData['id'];
+                    if(isset($reconciliationData['serverName'])) { $reconciliationData['server_name'] = $reconciliationData['serverName']; }
+                    if(isset($reconciliationData['expectedAmount'])) { $reconciliationData['expected_amount'] = $reconciliationData['expectedAmount']; }
+                    if(isset($reconciliationData['actualAmount'])) { $reconciliationData['actual_amount'] = $reconciliationData['actualAmount']; }
+                    if(isset($reconciliationData['managerName'])) { $reconciliationData['manager_name'] = $reconciliationData['managerName']; }
+                    if(isset($reconciliationData['timestamp'])) { $reconciliationData['timestamp'] = $this->normalizeTimestamp($reconciliationData['timestamp']); }
+                    $filtered = array_intersect_key($reconciliationData, array_flip($reconFields));
+                    Reconciliation::updateOrCreate(['id' => $id], $filtered);
+                }
             }
+
+            if (isset($data['settings']) && is_array($data['settings'])) {
+                foreach ($data['settings'] as $key => $value) {
+                    PosSetting::updateOrCreate(['key' => $key], ['value' => is_array($value) ? json_encode($value) : $value]);
+                }
+            }
+        } catch (\Exception $e) {
+            Log::error("CRITICAL SYNC ERROR (PUSH): " . $e->getMessage());
+            return response()->json(['status' => 'error', 'message' => 'Sync failed on server: ' . $e->getMessage()], 500);
         }
 
         return response()->json(['status' => 'success', 'message' => 'Data synchronized successfully']);

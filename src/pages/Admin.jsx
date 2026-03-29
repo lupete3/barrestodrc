@@ -39,8 +39,11 @@ function Admin() {
         await dbOrders.iterate(async (val, key) => { await dbOrders.setItem(key, { ...val, synced: false }); });
         await dbExpenses.iterate(async (val, key) => { await dbExpenses.setItem(key, { ...val, synced: false }); });
         await dbReconciliations.iterate(async (val, key) => { await dbReconciliations.setItem(key, { ...val, synced: false }); });
+        await dbCategories.iterate(async (val, key) => { await dbCategories.setItem(key, { ...val, synced: false }); });
+        await dbItems.iterate(async (val, key) => { await dbItems.setItem(key, { ...val, synced: false }); });
+        await dbUsers.iterate(async (val, key) => { await dbUsers.setItem(key, { ...val, synced: false }); });
         
-        showDialog('alert', 'Préparation Terminée', "Toutes les données locales ont été marquées pour renvoi. Début de la synchronisation...");
+        showDialog('alert', 'Préparation Terminée', "Toutes les données (Menu, Ventes, Dépenses) ont été marquées pour renvoi. Début de la synchronisation...");
         await handleSync();
       } catch (err) {
         showDialog('alert', 'Erreur', "Erreur lors de la préparation du renvoi: " + err.message);
