@@ -15,6 +15,11 @@ function POS() {
   const [isMobileCartOpen, setIsMobileCartOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
+  const [dialog, setDialog] = useState({ isOpen: false, type: 'alert', title: '', message: '', onConfirm: null });
+
+  const showDialog = (type, title, message, onConfirm = null) => {
+    setDialog({ isOpen: true, type, title, message, onConfirm });
+  };
 
   useEffect(() => {
     const init = async () => {
@@ -57,7 +62,7 @@ function POS() {
     setIsSyncing(true);
     try {
       const result = await performSync();
-      alert(`Synchronisation réussie !\n\nEnvoyé: ${result.pushed.orders} commandes, ${result.pushed.expenses} dépenses, ${result.pushed.reconciliations} clôtures.\nReçu: ${result.pulled.items} produits, ${result.pulled.users} utilisateurs.`);
+      showDialog('alert', 'Synchronisation Réussie', `Envoyé: ${result.pushed.orders} commandes, ${result.pushed.expenses} dépenses.\nReçu: ${result.pulled.items} produits, ${result.pulled.users} utilisateurs.`);
       
       // Refresh local view after pull override
       const cats = await getAllCategories();
@@ -69,22 +74,22 @@ function POS() {
       setAllItems(await getAllItems());
       await checkUnsyncedOrders();
     } catch (err) {
-      alert(err.message);
+      showDialog('alert', 'Échec Sync', err.message);
     } finally {
       setIsSyncing(false);
     }
   };
 
   const handleLogout = () => {
-    if(window.confirm("Êtes-vous sûr de vouloir fermer votre session ?")) {
+    showDialog('confirm', 'Déconnexion', "Êtes-vous sûr de vouloir fermer votre session ?", () => {
       logout();
       navigate('/login');
-    }
+    });
   };
 
   const handleAdminClick = () => {
     if (currentUser?.role !== 'admin') {
-      alert("Accès refusé. Réservé aux gérants.");
+      showDialog('alert', 'Accès Refusé', "Accès réservé aux gérants.");
     } else {
       navigate('/admin');
     }
@@ -211,7 +216,7 @@ function POS() {
                  el.style.transform = 'scale(0.95)'; 
                  setTimeout(()=> el.style.transform = 'none', 100);
                  addToCart(item);
-                 setSearchQuery(''); // Optional: clear search after picking? Better to keep it if they want multiple
+                 setSearchQuery(''); 
                }}
              >
                <div style={{ fontSize: '1.1rem', fontWeight: '500', flex: 1 }}>{item.name}</div>
@@ -283,8 +288,30 @@ function POS() {
            </div>
         </div>
       </aside>
+
+      {/* Custom Dialog / Modal */}
+      {dialog.isOpen && (
+         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'var(--bg-overlay)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+           <div className="glass" style={{ width: '90%', maxWidth: '400px', padding: '1.5rem', borderRadius: 'var(--border-radius-lg)', textAlign: 'center', animation: 'modalIn 0.3s ease-out' }}>
+              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>{dialog.type === 'confirm' ? '❓' : (dialog.title.toLowerCase().includes('erreur') || dialog.title.toLowerCase().includes('échec') ? '❌' : '✅')}</div>
+              <h3 style={{ margin: 0, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>{dialog.title}</h3>
+              <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem', whiteSpace: 'pre-wrap' }}>{dialog.message}</p>
+              <div style={{ display: 'flex', gap: '1rem' }}>
+                {dialog.type === 'confirm' && (
+                  <button className="btn btn-outline" style={{ flex: 1 }} onClick={() => setDialog({ ...dialog, isOpen: false })}>Annuler</button>
+                )}
+                <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => {
+                  if (dialog.onConfirm) dialog.onConfirm();
+                  setDialog({ ...dialog, isOpen: false });
+                }}>
+                  {dialog.type === 'confirm' ? 'Confirmer' : 'OK'}
+                </button>
+              </div>
+           </div>
+         </div>
+      )}
     </div>
-  )
+  );
 }
 
 export default POS;
