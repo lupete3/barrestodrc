@@ -179,9 +179,11 @@ function Admin() {
 }
 
 function DashboardView({ orders, config, refreshData }) {
-  const { toggleOrderPaymentStatus, lastOrder: storeLastOrder } = useStore();
+  const { toggleOrderPaymentStatus } = useStore();
   const [filterWaiter, setFilterWaiter] = React.useState('all');
   const [searchQuery, setSearchQuery] = React.useState('');
+  const [startDate, setStartDate] = React.useState('');
+  const [endDate, setEndDate] = React.useState('');
   
   // Get unique servers for filter
   const waiters = ['all', ...new Set(orders.map(o => o.server))];
@@ -190,7 +192,26 @@ function DashboardView({ orders, config, refreshData }) {
     const matchesWaiter = filterWaiter === 'all' || o.server === filterWaiter;
     const matchesSearch = o.id.toLowerCase().includes(searchQuery.toLowerCase()) || 
                          (o.total && o.total.toString().includes(searchQuery));
-    return matchesWaiter && matchesSearch;
+    
+    // Date Filtering
+    let matchesDate = true;
+    if (o.timestamp) {
+      const orderDate = new Date(o.timestamp);
+      orderDate.setHours(0, 0, 0, 0);
+
+      if (startDate) {
+        const start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+        if (orderDate < start) matchesDate = false;
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        if (orderDate > end) matchesDate = false;
+      }
+    }
+
+    return matchesWaiter && matchesSearch && matchesDate;
   });
 
   const totalRevenue = orders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
@@ -241,26 +262,87 @@ function DashboardView({ orders, config, refreshData }) {
 
   return (
     <div>
-      <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-        <div style={{ flex: '1 1 300px' }}>
-          <input 
-            type="text" 
-            placeholder="🔍 Chercher par ID ou Montant..." 
-            className="glass" 
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: 'var(--border-radius-sm)', border: '1px solid var(--border-color)' }}
-          />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '2rem' }}>
+        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+          <div style={{ flex: '1 1 300px' }}>
+            <input 
+              type="text" 
+              placeholder="🔍 Chercher par ID ou Montant..." 
+              className="glass" 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: 'var(--border-radius-sm)', border: '1px solid var(--border-color)' }}
+            />
+          </div>
+          <div style={{ width: '200px' }}>
+            <select 
+              className="glass" 
+              value={filterWaiter}
+              onChange={(e) => setFilterWaiter(e.target.value)}
+              style={{ width: '100%', padding: '0.75rem', borderRadius: 'var(--border-radius-sm)', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }}
+            >
+              {waiters.map(w => <option key={w} value={w}>{w === 'all' ? 'Tous les serveurs' : w}</option>)}
+            </select>
+          </div>
         </div>
-        <div style={{ width: '200px' }}>
-          <select 
-            className="glass" 
-            value={filterWaiter}
-            onChange={(e) => setFilterWaiter(e.target.value)}
-            style={{ width: '100%', padding: '0.75rem', borderRadius: 'var(--border-radius-sm)', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }}
-          >
-            {waiters.map(w => <option key={w} value={w}>{w === 'all' ? 'Tous les serveurs' : w}</option>)}
-          </select>
+
+        <div className="glass" style={{ display: 'flex', gap: '1rem', padding: '1rem', borderRadius: 'var(--border-radius-md)', flexWrap: 'wrap', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>De:</span>
+            <input 
+              type="date" 
+              className="glass" 
+              value={startDate} 
+              onChange={(e) => setStartDate(e.target.value)} 
+              style={{ padding: '0.4rem', border: '1px solid var(--border-color)', borderRadius: '4px', color: 'var(--text-primary)' }}
+            />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>À:</span>
+            <input 
+              type="date" 
+              className="glass" 
+              value={endDate} 
+              onChange={(e) => setEndDate(e.target.value)} 
+              style={{ padding: '0.4rem', border: '1px solid var(--border-color)', borderRadius: '4px', color: 'var(--text-primary)' }}
+            />
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem', marginLeft: 'auto' }}>
+            <button 
+              className="btn btn-outline" 
+              style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}
+              onClick={() => {
+                const today = new Date().toISOString().split('T')[0];
+                setStartDate(today);
+                setEndDate(today);
+              }}
+            >Aujourd'hui</button>
+            <button 
+              className="btn btn-outline" 
+              style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}
+              onClick={() => {
+                const now = new Date();
+                const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+                const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+                setStartDate(firstDay);
+                setEndDate(lastDay);
+              }}
+            >Ce Mois</button>
+            <button 
+              className="btn btn-outline" 
+              style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}
+              onClick={() => {
+                const year = new Date().getFullYear();
+                setStartDate(`${year}-01-01`);
+                setEndDate(`${year}-12-31`);
+              }}
+            >Cette Année</button>
+            <button 
+              className="btn btn-outline" 
+              style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}
+              onClick={() => { setStartDate(''); setEndDate(''); }}
+            >Tout</button>
+          </div>
         </div>
       </div>
       
