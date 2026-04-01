@@ -222,42 +222,9 @@ function DashboardView({ orders, config, refreshData }) {
   const todayRevenue = todaysOrders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
 
   const handleReprint = (order) => {
-    // Basic thermal print simulation via browser window
-    const printWindow = window.open('', '_blank', 'width=300,height=600');
-    const itemsHtml = order.items.map(it => `
-      <div style="display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 4px;">
-        <span>${it.quantity}x ${it.name}</span>
-        <span>${(it.price * it.quantity).toFixed(2)}${config.currency}</span>
-      </div>
-    `).join('');
-
-    printWindow.document.write(`
-      <html>
-        <body style="font-family: 'Courier New', Courier, monospace; padding: 10px; width: 280px; margin: 0 auto; line-height: 1.2;">
-          <div style="text-align: center; border-bottom: 1px dashed #000; padding-bottom: 10px; margin-bottom: 10px;">
-            <h2 style="margin: 0;">${config.restaurantName}</h2>
-            <p style="margin: 5px 0;">${config.phone || ''}</p>
-            <p style="margin: 5px 0; font-size: 12px;">ID: ${order.id}</p>
-          </div>
-          <div style="margin-bottom: 10px;">
-            <p style="margin: 2px 0;">Date: ${new Date(order.timestamp).toLocaleString()}</p>
-            <p style="margin: 2px 0;">Serveur: ${order.server}</p>
-          </div>
-          <div style="border-bottom: 1px dashed #000; padding-bottom: 5px; margin-bottom: 5px;">
-             ${itemsHtml}
-          </div>
-          <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 16px; margin-top: 10px;">
-            <span>TOTAL</span>
-            <span>${Number(order.total).toFixed(2)}${config.currency}</span>
-          </div>
-          <div style="text-align: center; margin-top: 20px; font-size: 12px; border-top: 1px dashed #000; padding-top: 10px;">
-            <p>${config.footerMessage.replace(/\*\*/g, '')}</p>
-          </div>
-          <script>window.onload = function() { window.print(); window.close(); }</script>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
+    // We use the global ReceiptPrinter by setting lastOrder in the store
+    // This is more reliable on mobile than window.open in this component
+    useStore.getState().setLastOrder(order);
   };
 
   return (

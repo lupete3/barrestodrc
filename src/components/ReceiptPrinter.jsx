@@ -5,11 +5,14 @@ const ReceiptPrinter = () => {
   const { lastOrder, config, clearLastOrder } = useStore();
 
   useEffect(() => {
-    if (lastOrder && config.printEnabled) {
+    if (lastOrder) {
       const handlePrint = () => {
-        const printWindow = window.open('', '', 'height=600,width=400');
+        // Use a slightly larger timeout for mobile browsers
+        const printWindow = window.open('', '_blank', 'height=600,width=400');
+        
         if (!printWindow) {
-          alert("Le bloqueur de fenêtres empêche l'impression. Veuillez autoriser les popups.");
+          alert("⚠️ Bloqueur de Fenêtres détecté !\n\nVeuillez autoriser les fenêtres surgissantes (popups) dans les réglages de votre navigateur pour pouvoir imprimer le ticket.");
+          clearLastOrder();
           return;
         }
 

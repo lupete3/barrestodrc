@@ -101,6 +101,8 @@ const useStore = create(
     }
   },
 
+  setLastOrder: (order) => set({ lastOrder: order }),
+
   toggleOrderPaymentStatus: async (orderId) => {
     try {
       const order = await dbOrders.getItem(orderId);
