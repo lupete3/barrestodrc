@@ -84,6 +84,7 @@ const useStore = create(
       tax: tax,
       total: subtotal + tax,
       timestamp: new Date().toISOString(),
+      is_paid: true, // Default to paid
       synced: false
     };
 
@@ -96,8 +97,23 @@ const useStore = create(
       return order;
     } catch (error) {
       console.error("Failed to save order offline:", error);
-      alert("Erreur d'enregistrement hors-ligne.");
       return null;
+    }
+  },
+
+  toggleOrderPaymentStatus: async (orderId) => {
+    try {
+      const order = await dbOrders.getItem(orderId);
+      if (order) {
+        order.is_paid = !order.is_paid;
+        order.synced = false; // Mark for sync
+        await dbOrders.setItem(orderId, order);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("Failed to toggle payment status:", error);
+      return false;
     }
   }
 }),

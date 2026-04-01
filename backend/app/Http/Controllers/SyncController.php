@@ -42,7 +42,7 @@ class SyncController extends Controller
         $data = $request->all();
 
         // White-lists of allowed database columns
-        $orderFields = ['id', 'items', 'total', 'tax', 'timestamp', 'server_name', 'reconciliation_id'];
+        $orderFields = ['id', 'items', 'total', 'tax', 'timestamp', 'server_name', 'reconciliation_id', 'is_paid'];
         $expenseFields = ['id', 'date', 'category', 'description', 'amount', 'timestamp'];
         $reconFields = ['id', 'date', 'server_name', 'expected_amount', 'actual_amount', 'variance', 'manager_name', 'timestamp'];
         $categoryFields = ['id', 'name', 'icon'];

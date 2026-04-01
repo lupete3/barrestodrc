@@ -179,6 +179,20 @@ function Admin() {
 }
 
 function DashboardView({ orders, config, refreshData }) {
+  const { toggleOrderPaymentStatus, lastOrder: storeLastOrder } = useStore();
+  const [filterWaiter, setFilterWaiter] = React.useState('all');
+  const [searchQuery, setSearchQuery] = React.useState('');
+  
+  // Get unique servers for filter
+  const waiters = ['all', ...new Set(orders.map(o => o.server))];
+
+  const filteredOrders = orders.filter(o => {
+    const matchesWaiter = filterWaiter === 'all' || o.server === filterWaiter;
+    const matchesSearch = o.id.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                         (o.total && o.total.toString().includes(searchQuery));
+    return matchesWaiter && matchesSearch;
+  });
+
   const totalRevenue = orders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
   const totalTaxes = orders.reduce((sum, o) => sum + (Number(o.tax) || 0), 0);
   
@@ -186,53 +200,115 @@ function DashboardView({ orders, config, refreshData }) {
   const todaysOrders = orders.filter(o => new Date(o.timestamp).toLocaleDateString() === todayLocal);
   const todayRevenue = todaysOrders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
 
+  const handleReprint = (order) => {
+    // Basic thermal print simulation via browser window
+    const printWindow = window.open('', '_blank', 'width=300,height=600');
+    const itemsHtml = order.items.map(it => `
+      <div style="display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 4px;">
+        <span>${it.quantity}x ${it.name}</span>
+        <span>${(it.price * it.quantity).toFixed(2)}${config.currency}</span>
+      </div>
+    `).join('');
+
+    printWindow.document.write(`
+      <html>
+        <body style="font-family: 'Courier New', Courier, monospace; padding: 10px; width: 280px; margin: 0 auto; line-height: 1.2;">
+          <div style="text-align: center; border-bottom: 1px dashed #000; padding-bottom: 10px; margin-bottom: 10px;">
+            <h2 style="margin: 0;">${config.restaurantName}</h2>
+            <p style="margin: 5px 0;">${config.phone || ''}</p>
+            <p style="margin: 5px 0; font-size: 12px;">ID: ${order.id}</p>
+          </div>
+          <div style="margin-bottom: 10px;">
+            <p style="margin: 2px 0;">Date: ${new Date(order.timestamp).toLocaleString()}</p>
+            <p style="margin: 2px 0;">Serveur: ${order.server}</p>
+          </div>
+          <div style="border-bottom: 1px dashed #000; padding-bottom: 5px; margin-bottom: 5px;">
+             ${itemsHtml}
+          </div>
+          <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 16px; margin-top: 10px;">
+            <span>TOTAL</span>
+            <span>${Number(order.total).toFixed(2)}${config.currency}</span>
+          </div>
+          <div style="text-align: center; margin-top: 20px; font-size: 12px; border-top: 1px dashed #000; padding-top: 10px;">
+            <p>${config.footerMessage.replace(/\*\*/g, '')}</p>
+          </div>
+          <script>window.onload = function() { window.print(); window.close(); }</script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-        <h2 style={{ color: 'var(--color-warning)', margin: 0 }}>Performances Résumées</h2>
-        <button className="btn btn-outline" onClick={refreshData}>🔄 Actualiser</button>
+      <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+        <div style={{ flex: '1 1 300px' }}>
+          <input 
+            type="text" 
+            placeholder="🔍 Chercher par ID ou Montant..." 
+            className="glass" 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: 'var(--border-radius-sm)', border: '1px solid var(--border-color)' }}
+          />
+        </div>
+        <div style={{ width: '200px' }}>
+          <select 
+            className="glass" 
+            value={filterWaiter}
+            onChange={(e) => setFilterWaiter(e.target.value)}
+            style={{ width: '100%', padding: '0.75rem', borderRadius: 'var(--border-radius-sm)', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }}
+          >
+            {waiters.map(w => <option key={w} value={w}>{w === 'all' ? 'Tous les serveurs' : w}</option>)}
+          </select>
+        </div>
       </div>
       
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-        <div className="glass" style={{ padding: '1.25rem', borderRadius: 'var(--border-radius-md)' }}>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '0.25rem' }}>Recettes Aujourd'hui</p>
-          <div style={{ fontSize: '2rem', fontWeight: '700', color: 'var(--color-primary)' }}>{Number(todayRevenue || 0).toFixed(2)}{config.currency}</div>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '0.25rem' }}>{todaysOrders.length} commandes réelles</p>
-        </div>
-        <div className="glass" style={{ padding: '1.25rem', borderRadius: 'var(--border-radius-md)' }}>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '0.25rem' }}>Chiffre d'affaires Global</p>
-          <div style={{ fontSize: '2rem', fontWeight: '700' }}>{Number(totalRevenue || 0).toFixed(2)}{config.currency}</div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem', opacity: 0.8 }}>
-             <span style={{ fontSize: '0.8rem' }}>Historique complet POS</span>
-             <span style={{ fontSize: '0.8rem', color: 'var(--color-warning)' }}>TVA: {Number(totalTaxes || 0).toFixed(2)}{config.currency}</span>
-          </div>
-        </div>
-      </div>
-      
-      <h3 style={{ marginBottom: '1rem' }}>Dernières Commandes</h3>
+      <h3 style={{ marginBottom: '1rem' }}>Dernières Commandes ({filteredOrders.length})</h3>
       <div className="glass" style={{ borderRadius: 'var(--border-radius-md)', overflowX: 'auto' }}>
-        <table style={{ width: '100%', minWidth: '600px', borderCollapse: 'collapse', textAlign: 'left' }}>
+        <table style={{ width: '100%', minWidth: '800px', borderCollapse: 'collapse', textAlign: 'left' }}>
           <thead style={{ backgroundColor: 'var(--bg-surface-elevated)' }}>
             <tr>
               <th style={{ padding: '1rem' }}>ID</th>
               <th style={{ padding: '1rem' }}>Heure</th>
               <th style={{ padding: '1rem' }}>Serveur</th>
               <th style={{ padding: '1rem' }}>Montant</th>
-              <th style={{ padding: '1rem' }}>Statut</th>
+              <th style={{ padding: '1rem' }}>Paiement</th>
+              <th style={{ padding: '1rem' }}>Sinc.</th>
+              <th style={{ padding: '1rem' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {orders.slice(0, 15).map(o => (
-              <tr key={o.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                <td style={{ padding: '1rem' }}>{o.id}</td>
-                <td style={{ padding: '1rem' }}>{o.timestamp ? new Date(o.timestamp).toLocaleString() : 'N/A'}</td>
+            {filteredOrders.slice(0, 50).map(o => (
+              <tr key={o.id} style={{ borderBottom: '1px solid var(--border-color)', opacity: o.is_paid === false ? 0.8 : 1 }}>
+                <td style={{ padding: '1rem', fontSize: '0.85rem' }}>{o.id}</td>
+                <td style={{ padding: '1rem', fontSize: '0.85rem' }}>{o.timestamp ? new Date(o.timestamp).toLocaleString() : 'N/A'}</td>
                 <td style={{ padding: '1rem' }}>{o.server}</td>
                 <td style={{ padding: '1rem', fontWeight: '600' }}>{Number(o.total || 0).toFixed(2)}{config.currency}</td>
-                <td style={{ padding: '1rem' }}>{o.synced ? '✅ Sync' : '⚠️ Local'}</td>
+                <td style={{ padding: '1rem' }}>
+                   <button 
+                     onClick={() => { toggleOrderPaymentStatus(o.id); refreshData(); }}
+                     style={{ 
+                       padding: '0.25rem 0.6rem', 
+                       borderRadius: '4px', 
+                       fontSize: '0.8rem',
+                       border: 'none',
+                       cursor: 'pointer',
+                       backgroundColor: o.is_paid !== false ? 'rgba(76, 175, 80, 0.2)' : 'rgba(244, 67, 54, 0.2)',
+                       color: o.is_paid !== false ? '#4caf50' : '#f44336'
+                     }}
+                   >
+                     {o.is_paid !== false ? '✅ Payé' : '❌ Impayé'}
+                   </button>
+                </td>
+                <td style={{ padding: '1rem' }}>{o.synced ? '☁️' : '📲'}</td>
+                <td style={{ padding: '1rem' }}>
+                   <button className="btn btn-outline" style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem' }} onClick={() => handleReprint(o)}>🖨️ Ticket</button>
+                </td>
               </tr>
             ))}
-            {orders.length === 0 && (
-              <tr><td colSpan="5" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>Aucune commande</td></tr>
+            {filteredOrders.length === 0 && (
+              <tr><td colSpan="7" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>Aucune commande trouvée</td></tr>
             )}
           </tbody>
         </table>
